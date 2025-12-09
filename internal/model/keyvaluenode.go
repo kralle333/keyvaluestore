@@ -13,14 +13,14 @@ type KeyValueNode struct {
 }
 
 func LessThanKeyValueNode(a, b KeyValueNode) bool {
-	if a.Key > b.Key {
+	if a.Key < b.Key {
 		return true
 	}
-	if a.Key < b.Key {
+	if a.Key > b.Key {
 		return false
 	}
 
-	return a.Timestamp <= b.Timestamp
+	return a.Timestamp < b.Timestamp
 }
 
 func NewKeyValueTree() *btree.BTreeG[KeyValueNode] {

@@ -26,7 +26,7 @@ type App struct {
 	HttpServer     *handler.KeyValueHttpServer
 }
 
-func NewApp(cfg AppConfig) (*App, error) {
+func NewApp(config AppConfig) (*App, error) {
 	logger, err := zap.NewProduction()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create logger: %w", err)
@@ -34,15 +34,24 @@ func NewApp(cfg AppConfig) (*App, error) {
 
 	// Setup dependencies
 	communication := model.NewKeyValueActorCommunication()
-	storage := repository.NewKeyValueStorage(cfg.SnapshotDir, *logger)
+	storage := repository.NewKeyValueStorage(config.SnapshotDir, *logger)
 
 	// Inject dependencies and use config values
-	server := handler.NewKeyValueHttpServer(communication, cfg.ListeningPort)
+	server := handler.NewKeyValueHttpServer(communication, config.ListeningPort)
+	snapshotLogger := service.NewSnapshotService(communication, config.SnapshotIntervalSeconds, logger)
 	actor := service.NewKeyValueActor(communication, storage, logger)
-	snapshotLogger := service.NewSnapshotService(communication, cfg.SnapshotIntervalSeconds, logger)
+
+	// If we already have saved snapshot, use it to populate Actor's internal data
+	if config.RestoreFromSnapshot {
+		snapshot, err := storage.RetrieveLatest()
+		if err != nil {
+			return nil, err
+		}
+		actor.PopulateFromSnapshot(snapshot)
+	}
 
 	return &App{
-		Config:         cfg,
+		Config:         config,
 		Logger:         logger,
 		Storage:        storage,
 		Actor:          actor,

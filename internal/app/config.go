@@ -6,6 +6,7 @@ type AppConfig struct {
 	SnapshotDir             string
 	ListeningPort           uint16
 	SnapshotIntervalSeconds int64
+	RestoreFromSnapshot     bool
 }
 
 func GetTestingConfig() AppConfig {
@@ -13,5 +14,6 @@ func GetTestingConfig() AppConfig {
 		SnapshotDir:             "test_snapshots/",
 		ListeningPort:           8080,
 		SnapshotIntervalSeconds: 2,
+		RestoreFromSnapshot:     true,
 	}
 }

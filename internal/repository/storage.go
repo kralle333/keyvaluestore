@@ -3,9 +3,10 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/btree"
@@ -86,14 +87,23 @@ func (k *KeyValueStorage) getLatestFile() (string, error) {
 	entries, err := os.ReadDir(k.dir)
 
 	if err != nil {
-		log.Printf("Failed to retrieve latest file from dir %s", k.dir)
-	}
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		return entry.Name(), nil
+		return "", model.ErrUnableToReadFromSnapshotDir
 	}
 
-	return "", model.ErrNoSnapshotsFound
+	var jsonFiles []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			jsonFiles = append(jsonFiles, entry.Name())
+		}
+	}
+
+	if len(jsonFiles) == 0 {
+		return "", model.ErrNoSnapshotsFound
+	}
+
+	// log files have unix timestamp as suffix, so just sort them to get the latest
+	sort.Strings(jsonFiles)
+
+	latest := jsonFiles[len(jsonFiles)-1]
+	return latest, nil
 }

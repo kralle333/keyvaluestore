@@ -47,7 +47,7 @@ func TestCanStoreAndRetrieve(t *testing.T) {
 
 	var found *model.KeyValueNode
 	latest.AscendGreaterOrEqual(node1, func(item model.KeyValueNode) bool {
-		if model.LessThanKeyValueNode(node1, item) {
+		if item.Key == node1.Key {
 			found = &item
 		}
 		return found == nil
