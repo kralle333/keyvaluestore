@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	"github.com/google/btree"
 	"github.com/kralle333/keyvaluestore/internal/model"
 	"github.com/kralle333/keyvaluestore/internal/repository"
@@ -61,7 +63,7 @@ func (k *KeyValueActor) Spawn() {
 			case <-k.communication.Snapshot:
 				if k.dirty {
 					copied := k.data.Clone()
-					k.storage.SpawnLogSnapshot(copied)
+					k.storage.SpawnLogSnapshot(copied, time.Now().Unix())
 					k.dirty = false
 				} else {
 					k.logger.Debug("Skipping logging snapshot, dirty=false")

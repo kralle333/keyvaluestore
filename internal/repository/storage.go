@@ -6,8 +6,8 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/btree"
 	"github.com/kralle333/keyvaluestore/internal/model"
@@ -28,7 +28,8 @@ func NewKeyValueStorage(dir string, parentLogger zap.Logger) *KeyValueStorage {
 	}
 }
 
-func (k *KeyValueStorage) SpawnLogSnapshot(tree *btree.BTreeG[model.KeyValueNode]) {
+// Store the current state and use timestamp to name the file
+func (k *KeyValueStorage) SpawnLogSnapshot(tree *btree.BTreeG[model.KeyValueNode], timestamp int64) {
 
 	go func(tree *btree.BTreeG[model.KeyValueNode]) {
 		data := model.KeyValueNodes{Nodes: []model.KeyValueNode{}}
@@ -43,7 +44,7 @@ func (k *KeyValueStorage) SpawnLogSnapshot(tree *btree.BTreeG[model.KeyValueNode
 			return
 		}
 
-		outputPath := path.Join(k.dir, fmt.Sprintf("state_%d.json", time.Now().Unix()))
+		outputPath := path.Join(k.dir, fmt.Sprintf("state_%d.json", timestamp))
 		k.logger.Debug("Attempting to write snapshot to file", zap.String("filepath", outputPath))
 		err = os.WriteFile(outputPath, jsonData, os.ModePerm.Perm())
 		if err != nil {
@@ -83,9 +84,7 @@ func (k *KeyValueStorage) RetrieveLatest() (*btree.BTreeG[model.KeyValueNode], e
 }
 
 func (k *KeyValueStorage) getLatestFile() (string, error) {
-
 	entries, err := os.ReadDir(k.dir)
-
 	if err != nil {
 		return "", model.ErrUnableToReadFromSnapshotDir
 	}
@@ -101,9 +100,16 @@ func (k *KeyValueStorage) getLatestFile() (string, error) {
 		return "", model.ErrNoSnapshotsFound
 	}
 
-	// log files have unix timestamp as suffix, so just sort them to get the latest
-	sort.Strings(jsonFiles)
+	// Extract timestamp and use it to sort the files
+	sort.Slice(jsonFiles, func(i, j int) bool {
+		getTs := func(name string) int64 {
+			base := strings.TrimSuffix(name, ".json")
+			part := base[strings.LastIndex(base, "_")+1:]
+			ts, _ := strconv.ParseInt(part, 10, 64)
+			return ts
+		}
+		return getTs(jsonFiles[i]) < getTs(jsonFiles[j])
+	})
 
-	latest := jsonFiles[len(jsonFiles)-1]
-	return latest, nil
+	return jsonFiles[len(jsonFiles)-1], nil
 }
